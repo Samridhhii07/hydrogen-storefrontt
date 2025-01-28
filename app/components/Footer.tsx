@@ -1,6 +1,7 @@
 import {Suspense} from 'react';
 import {Await, NavLink} from '@remix-run/react';
 import type {FooterQuery, HeaderQuery} from 'storefrontapi.generated';
+import { EmailSignupForm } from './EmailSignupForm';
 
 interface FooterProps {
   footer: Promise<FooterQuery | null>;
@@ -18,6 +19,9 @@ export function Footer({
       <Await resolve={footerPromise}>
         {(footer) => (
           <footer className="footer">
+            <div className="mb-8">
+              <EmailSignupForm />
+            </div>
             {footer?.menu && header.shop.primaryDomain?.url && (
               <FooterMenu
                 menu={footer.menu}
@@ -74,6 +78,8 @@ function FooterMenu({
 }
 
 const FALLBACK_FOOTER_MENU = {
+
+  
   id: 'gid://shopify/Menu/199655620664',
   items: [
     {
@@ -124,6 +130,6 @@ function activeLinkStyle({
 }) {
   return {
     fontWeight: isActive ? 'bold' : undefined,
-    color: isPending ? 'grey' : 'white',
+    color: isPending ? 'grey' : 'black',
   };
 }

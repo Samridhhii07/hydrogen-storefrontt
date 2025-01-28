@@ -207,7 +207,7 @@ button.reset:hover:not(:has(> *)) {
 * --------------------------------------------------
 */
 .footer {
-  background: var(--color-dark);
+  background: white;
   margin-top: auto;
 }
 
@@ -219,7 +219,7 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .footer-menu a {
-  color: var(--color-light);
+  color: white;
 }
 
 /*

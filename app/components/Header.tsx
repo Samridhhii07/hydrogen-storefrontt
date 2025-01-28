@@ -7,6 +7,7 @@ import {
 } from '@shopify/hydrogen';
 import type {HeaderQuery, CartApiQueryFragment} from 'storefrontapi.generated';
 import {useAside} from '~/components/Aside';
+import { AnnouncementBar } from './AnnouncementBar';
 
 interface HeaderProps {
   header: HeaderQuery;
@@ -25,18 +26,21 @@ export function Header({
 }: HeaderProps) {
   const {shop, menu} = header;
   return (
-    <header className="header">
-      <NavLink prefetch="intent" to="/" style={activeLinkStyle} end>
-        <strong>{shop.name}</strong>
-      </NavLink>
-      <HeaderMenu
-        menu={menu}
-        viewport="desktop"
-        primaryDomainUrl={header.shop.primaryDomain.url}
-        publicStoreDomain={publicStoreDomain}
-      />
-      <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
-    </header>
+    <>
+      <AnnouncementBar />
+      <header className="header">
+        <NavLink prefetch="intent" to="/" style={activeLinkStyle} end>
+          <strong>{shop.name}</strong>
+        </NavLink>
+        <HeaderMenu
+          menu={menu}
+          viewport="desktop"
+          primaryDomainUrl={header.shop.primaryDomain.url}
+          publicStoreDomain={publicStoreDomain}
+        />
+        <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
+      </header>
+    </>
   );
 }
 
@@ -169,11 +173,6 @@ function CartToggle({cart}: Pick<HeaderProps, 'cart'>) {
   );
 }
 
-function CartBanner() {
-  const originalCart = useAsyncValue() as CartApiQueryFragment | null;
-  const cart = useOptimisticCart(originalCart);
-  return <CartBadge count={cart?.totalQuantity ?? 0} />;
-}
 
 const FALLBACK_HEADER_MENU = {
   id: 'gid://shopify/Menu/199655587896',
@@ -228,4 +227,10 @@ function activeLinkStyle({
     fontWeight: isActive ? 'bold' : undefined,
     color: isPending ? 'grey' : 'black',
   };
+}
+
+function CartBanner() {
+  const originalCart = useAsyncValue() as CartApiQueryFragment | null;
+  const cart = useOptimisticCart(originalCart);
+  return <CartBadge count={cart?.totalQuantity ?? 0} />;
 }

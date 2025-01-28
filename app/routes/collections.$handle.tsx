@@ -1,5 +1,5 @@
 import {defer, redirect, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
-import {useLoaderData, Link, type MetaFunction} from '@remix-run/react';
+import {useLoaderData, Link, type MetaFunction, useNavigate, useLocation} from '@remix-run/react';
 import {
   getPaginationVariables,
   Image,
@@ -9,17 +9,30 @@ import {
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/lib/variants';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {useState, useEffect} from 'react';
+import { PriceFilter } from '~/components/PriceFilter';
 
 export const meta: MetaFunction<typeof loader> = ({data}) => {
   return [{title: `Hydrogen | ${data?.collection.title ?? ''} Collection`}];
 };
 
-export async function loader(args: LoaderFunctionArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
+export async function loader({context, params, request}: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const minPrice = url.searchParams.get('minPrice');
+  const maxPrice = url.searchParams.get('maxPrice');
 
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
+  // Convert price strings to numbers and multiply by 100 for cents
+  const minPriceInCents = minPrice ? Math.round(parseFloat(minPrice) * 100) : undefined;
+  const maxPriceInCents = maxPrice ? Math.round(parseFloat(maxPrice) * 100) : undefined;
+
+  const deferredData = loadDeferredData({context, params, request});
+  const criticalData = await loadCriticalData({
+    context,
+    params,
+    request,
+    minPrice: minPriceInCents,
+    maxPrice: maxPriceInCents,
+  });
 
   return defer({...deferredData, ...criticalData});
 }
@@ -32,7 +45,12 @@ async function loadCriticalData({
   context,
   params,
   request,
-}: LoaderFunctionArgs) {
+  minPrice,
+  maxPrice,
+}: LoaderFunctionArgs & {
+  minPrice?: number;
+  maxPrice?: number;
+}) {
   const {handle} = params;
   const {storefront} = context;
   const paginationVariables = getPaginationVariables(request, {
@@ -43,10 +61,18 @@ async function loadCriticalData({
     throw redirect('/collections');
   }
 
+  // Debug log the query variables
+  const queryVariables = {
+    handle,
+    ...paginationVariables,
+    minPrice: minPrice ? minPrice : null,
+    maxPrice: maxPrice ? maxPrice : null,
+  };
+  
+
   const [{collection}] = await Promise.all([
     storefront.query(COLLECTION_QUERY, {
-      variables: {handle, ...paginationVariables},
-      // Add other queries here, so that they are loaded in parallel
+      variables: queryVariables,
     }),
   ]);
 
@@ -55,6 +81,7 @@ async function loadCriticalData({
       status: 404,
     });
   }
+
 
   return {
     collection,
@@ -75,20 +102,35 @@ export default function Collection() {
 
   return (
     <div className="collection">
-      <h1>{collection.title}</h1>
-      <p className="collection-description">{collection.description}</p>
-      <PaginatedResourceSection
-        connection={collection.products}
-        resourcesClassName="products-grid"
-      >
-        {({node: product, index}) => (
-          <ProductItem
-            key={product.id}
-            product={product}
-            loading={index < 8 ? 'eager' : undefined}
-          />
-        )}
-      </PaginatedResourceSection>
+      <div className="p-6">
+        {/* Header section with title, description, and filter */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-4">{collection.title}</h1>
+          <div className="flex justify-between items-center gap-8">
+            <p className="collection-description flex-grow">
+              {collection.description}
+            </p>
+            <div className="w-72"> {/* Fixed width for the filter */}
+              <PriceFilter />
+            </div>
+          </div>
+        </div>
+
+        {/* Products grid */}
+        <PaginatedResourceSection
+          connection={collection.products}
+          resourcesClassName="grid grid-cols-4 gap-6"
+        >
+          {({node: product, index}) => (
+            <ProductItem
+              key={product.id}
+              product={product}
+              loading={index < 8 ? 'eager' : undefined}
+            />
+          )}
+        </PaginatedResourceSection>
+      </div>
+      
       <Analytics.CollectionView
         data={{
           collection: {
@@ -157,6 +199,14 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
         ...MoneyProductItem
       }
     }
+    variants(first: 1) {
+      nodes {
+        price {
+          amount
+          currencyCode
+        }
+      }
+    }
   }
 ` as const;
 
@@ -171,6 +221,8 @@ const COLLECTION_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
+    $minPrice: Float
+    $maxPrice: Float
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       id
@@ -181,7 +233,15 @@ const COLLECTION_QUERY = `#graphql
         first: $first,
         last: $last,
         before: $startCursor,
-        after: $endCursor
+        after: $endCursor,
+        sortKey: PRICE,
+        filters: {
+          price: {
+            min: $minPrice
+            max: $maxPrice
+          }
+          available: true
+        }
       ) {
         nodes {
           ...ProductItem

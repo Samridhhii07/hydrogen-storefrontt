@@ -73,17 +73,27 @@ function FeaturedCollection({
   if (!collection) return null;
   const image = collection?.image;
   return (
-    <Link
-      className="featured-collection"
-      to={`/collections/${collection.handle}`}
-    >
-      {image && (
-        <div className="featured-collection-image">
-          <Image data={image} sizes="100vw" />
-        </div>
-      )}
-      <h1>{collection.title}</h1>
-    </Link>
+    <>
+      <Link
+        className="featured-collection"
+        to={`/collections/${collection.handle}`}
+      >
+        {image && (
+          <div className="featured-collection-image">
+            <Image data={image} sizes="100vw" />
+          </div>
+        )}
+        <h1>{collection.title}</h1>
+      </Link>
+      <div className="flex justify-center gap-4 mt-4">
+        <Link 
+          to="/topcollection" 
+          className="text-black hover:text-gray-600 transition-colors"
+        >
+          View All Collections
+        </Link>
+      </div>
+    </>
   );
 }
 

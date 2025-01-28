@@ -1,5 +1,5 @@
 import {defer, type LoaderFunctionArgs} from '@shopify/remix-oxygen';
-import {useLoaderData, type MetaFunction} from '@remix-run/react';
+import {Link, Outlet, useLoaderData, type MetaFunction} from '@remix-run/react';
 import {
   getSelectedProductOptions,
   Analytics,
@@ -76,7 +76,7 @@ function loadDeferredData({context, params}: LoaderFunctionArgs) {
   return {};
 }
 
-export default function Product() {
+export default function ProductHandle() {
   const {product} = useLoaderData<typeof loader>();
 
   // Optimistically selects a variant with given available variant information
@@ -135,6 +135,14 @@ export default function Product() {
           ],
         }}
       />
+      <Link
+        key={product.id}
+        to={`/product/${product.handle}/recommendation`} // Updated path to match route structure
+        className="group"
+        prefetch="intent"
+      >
+        Show Similar Products
+      </Link>
     </div>
   );
 }
